@@ -66,3 +66,20 @@ def buscar_producto(busqueda):
     conexion.close()
     return productos
 
+def actualizar_stock(id_producto_a_modificar,cantidad_a_agregar):
+    conexion = sqlite3.connect("ferreteria.db")
+    cursor = conexion.cursor()
+    
+    sql = """
+        UPDATE productos
+        SET stock_actual = stock_actual + ?
+        WHERE id = ?
+    """
+    cursor.execute(sql,(cantidad_a_agregar,id_producto_a_modificar))
+    conexion.commit()
+    conexion.close()
+    print(f"Base de datos actualizada, ID: {id_producto_a_modificar} sumo: {cantidad_a_agregar} unidades")
+    
+
+    
+    
