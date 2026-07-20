@@ -1,8 +1,8 @@
 # interfaz.py
 
 import tkinter as tk
-from tkinter import ttk
-from db_manager import buscar_producto, actualizar_stock, insertar_nuevo_producto
+from tkinter import ttk, messagebox
+from db_manager import buscar_producto, actualizar_stock, insertar_nuevo_producto,borrar_producto_bd
 id_producto_seleccionado = 0
 
 def actualizar_tabla():
@@ -15,14 +15,14 @@ def actualizar_tabla():
     tabla.tag_configure("alerta_stock", background="#ff7575")
 
     for producto in productos_buscados:
-        id_prod = producto[0]
-        cod_prov = producto[1]
-        prov = producto[2]
-        nombre = producto[3]
-        stock_actual = producto[4]
-        precio_costo = producto[5]
-        precio_venta = producto[6]
-        stock_minimo = producto[8]
+        id_prod = producto["id"]
+        cod_prov = producto["codigo_proveedor"]
+        prov = producto["proveedor_origen"]
+        nombre = producto["nombre"]
+        stock_actual = producto["stock_actual"]
+        precio_costo = producto["precio_costo"]
+        precio_venta = round(producto["precio_venta"],2)
+        stock_minimo = producto["stock_minimo"]
 
         valores_fila = (id_prod, cod_prov, prov, nombre, precio_costo, stock_actual, precio_venta)
                 
@@ -54,21 +54,28 @@ def al_doble_click(event):
         id_producto_seleccionado = int(valores_producto[0])
         producto = valores_producto[3]
         titulo_producto.config(text=f"{producto}")
+        boton_borrar_producto = tk.Button(ventana,text="Borrar Producto", font=("Arial",11), command=lambda:borrar_producto(producto,valores_producto[0]))
+        boton_borrar_producto.grid(row=4,column=2,padx=5)
     else:    
         titulo_producto.config(text="")
         id_producto_seleccionado = 0
         
+
+        
 def guardar_nuevo_stock():
     global id_producto_seleccionado
     if id_producto_seleccionado == 0:
-        print("Debes hacer doble click en un producto para actualizar stock!")
+        messagebox.showerror("","Debes hacer doble click en un producto para actualizar stock!")
         return
-    cantidad_a_sumar = int(entrada_stock.get())
-    actualizar_stock(id_producto_seleccionado,cantidad_a_sumar)
-    entrada_stock.delete(0,tk.END)
-    titulo_producto.config(text="Stock actualizado!")
-    id_producto_seleccionado = 0
-    actualizar_tabla()
+    try:
+        cantidad_a_sumar = int(entrada_stock.get())
+        actualizar_stock(id_producto_seleccionado,cantidad_a_sumar)
+        entrada_stock.delete(0,tk.END)
+        titulo_producto.config(text="Stock actualizado!")
+        id_producto_seleccionado = 0
+        actualizar_tabla()
+    except ValueError:
+        messagebox.showerror("","Debes agregar la cantidad de stock deseada!")
     
 def abrir_ventana_producto_nuevo():
     ventana_nueva = tk.Toplevel(ventana)
@@ -111,7 +118,7 @@ def abrir_ventana_producto_nuevo():
     entrada_stock_minimo.grid(row=1,column=6,pady=5,padx=1)
     # stock_minimo = entrada_stock_minimo.get()
 
-    boton_guardad_producto = tk.Button(ventana_nueva,text="Guardar Producto",font=("Arial",11), command=lambda: validar_y_guardar_producto(
+    boton_guardar_producto = tk.Button(ventana_nueva,text="Guardar Producto",font=("Arial",11), command=lambda: validar_y_guardar_producto(
         entrada_codigo_proveedor,
         entrada_nombre_proveedor,
         entrada_nombre_producto,
@@ -121,7 +128,7 @@ def abrir_ventana_producto_nuevo():
         entrada_stock_minimo,
         ventana_nueva
     ))
-    boton_guardad_producto.grid(row=2,column=1,padx=10,pady=10,columnspan=2)    
+    boton_guardar_producto.grid(row=2,column=1,padx=10,pady=10,columnspan=2)    
     boton_cerrar_ventana = tk.Button(ventana_nueva,text="Cerrar",font=("Arial",11), command=lambda: ventana_nueva.destroy())
     boton_cerrar_ventana.grid(row=2,column=4,padx=10,pady=10,columnspan=2)
 
@@ -135,24 +142,11 @@ def validar_y_guardar_producto(ent_cod,ent_prov,ent_nombre,ent_costo,ent_gan,ent
     stock_minimo = ent_stock_min.get()
     if cod_proveedor == "":
         cod_proveedor = "---"
-    if nombre_proveedor == "":
-        print("No se puede cargar producto sin cargar proveedor")
-        return 
-    if nombre_producto == "":
-        print("No se puede cargar producto sin cargar nombre")
-        return 
-    if costo == "":
-        print("No se puede cargar producto sin cargar costo")
-        return 
     if ganancia == "":
         ganancia = 40
-    if stock == "":
-        print("No se puede guardar producto sin cargar stock")
-        return 
     if stock_minimo == "":
         stock_minimo = 5
     try:
-        # Intentamos guardar en la BD convirtiendo a los tipos correctos
         insertar_nuevo_producto(
             str(cod_proveedor),
             str(nombre_proveedor),
@@ -165,7 +159,24 @@ def validar_y_guardar_producto(ent_cod,ent_prov,ent_nombre,ent_costo,ent_gan,ent
         actualizar_tabla()
         ventana_cerrar.destroy()
     except ValueError:
-        print("Error: Verifica que Costo, Ganancia y Stock sean números válidos.")
+        messagebox.showerror("Error","Verifica que Costo, Ganancia y Stock sean números válidos.")
+        ventana_cerrar.destroy()
+        
+def borrar_producto(nombre,id):
+    ventana_confirmacion_borrar = tk.Toplevel(ventana)
+    ventana_confirmacion_borrar.title("Borrar Producto")
+    ventana_confirmacion_borrar.geometry("350x120")
+    def confirmar():
+        borrar_producto_bd(id)
+        actualizar_tabla()
+        ventana_confirmacion_borrar.destroy()
+    titulo_confirmacion_borrar = tk.Label(ventana_confirmacion_borrar, text=f"¿Estas seguro que deseas borrar el producto \n{nombre}?",font=("Arial",11,"bold"))
+    titulo_confirmacion_borrar.grid(row=0,column=0,columnspan=2,padx=5,pady=5)
+    boton_cancelar = tk.Button(ventana_confirmacion_borrar, text="Cancelar", font=("Arial",11), command=lambda: ventana_confirmacion_borrar.destroy())
+    boton_cancelar.grid(row=1,column=0,padx=10,pady=10)
+    boton_confirmar = tk.Button(ventana_confirmacion_borrar, text="Confirmar", font=("Arial",11), command=lambda: confirmar())
+    boton_confirmar.grid(row=1,column=1,padx=10,pady=10)
+        
 
 ventana = tk.Tk()
 ventana.title("Control de stock - Ferreteria")

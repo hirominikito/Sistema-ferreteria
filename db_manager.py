@@ -47,6 +47,7 @@ def mostrar_base_datos():
     
 def buscar_producto(busqueda):
     with sqlite3.connect("ferreteria.db") as conexion:
+        conexion.row_factory = sqlite3.Row
         cursor = conexion.cursor()
         sql = """
             SELECT * FROM productos
@@ -82,5 +83,13 @@ def insertar_nuevo_producto(cod_proveedor,nombre_proveedor,nombre_producto,costo
         conexion.commit()
 
 
-    
+def borrar_producto_bd(id):
+    with sqlite3.connect("ferreteria.db") as conexion:
+        cursor = conexion.cursor()
+        sql = """
+            DELETE FROM productos 
+            WHERE id = ?        
+        """
+        cursor.execute(sql,(id,))
+        conexion.commit()
     
